@@ -1,0 +1,52 @@
+aoc1 <- read.csv("...")
+
+colnames(aoc1) <- c("depth")
+
+aoc1$rn <- seq(1,nrow(aoc1),1)
+
+a1_sj <- sqldf("
+                SELECT
+                  aoc2.*,
+                    aoc1.depth AS prev_depth
+                FROM aoc1 aoc2
+                    LEFT JOIN aoc1 ON (aoc1.rn = aoc2.rn - 1)
+               ")
+
+a1_sj$diff <- with(a1_sj, depth - prev_depth)
+a1_sj$diff <- with(a1_sj, ifelse(is.na(diff) == 1, 0, diff))
+a1_sj$poz_depth <- with(a1_sj, ifelse(diff > 0, 1, 0))
+
+a1_sj %>%
+  summarise(count = n(),
+            depth_decrease = sum(poz_depth))
+
+# expand to sum 3 before/after
+
+a1ss <- select(a1_sj, rn, depth, prev_depth)
+
+a1ss_sj <- sqldf("
+                  SELECT
+                    a1ss2.*,
+                      a1ss.depth AS next_depth
+                  FROM a1ss a1ss2
+                      LEFT JOIN a1ss ON (a1ss.rn = a1ss2.rn + 1)
+                 ")
+
+a1_rs <- a1ss_sj %>%
+  filter(is.na(prev_depth) == FALSE) %>%
+  filter(is.na(next_depth) == FALSE) %>%
+  mutate(rolling_sum = depth + prev_depth + next_depth)
+
+a1rs_sj <- sqldf("
+                      SELECT
+                        a2.*,
+                          a1.rolling_sum AS prev_sum
+                      FROM a1_rs a2
+                          LEFT JOIN a1_rs a1 ON (a2.rn - 1 = a1.rn)
+                   ")
+
+a1rs_sj %>%
+  filter(is.na(prev_sum) == FALSE) %>%
+  mutate(rolling_increase = ifelse(rolling_sum > prev_sum, 1, 0)) %>%
+  summarise(count = n(),
+            sum = sum(rolling_increase))
