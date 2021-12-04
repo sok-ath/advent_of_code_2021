@@ -1,0 +1,25 @@
+###### puzzle 2
+
+aoc2 <- read.csv("...")
+
+# split input cols on " "
+aoc2_cs <- colsplit(aoc2$dir_mag, " ", c("direction", "magnitude"))
+
+# part 1: want net depth, and then product
+
+aoc2_cs$net_forward <- with(aoc2_cs,
+                            ifelse(direction == "forward", magnitude, 0))
+
+aoc2_cs$net_depth <- with(aoc2_cs,
+                          ifelse(direction == "down", magnitude, 
+                                 ifelse(direction == "up", -1 * magnitude, 0)))
+
+sum(aoc2_cs$net_depth) * sum(aoc2_cs$net_forward)
+
+# part 2: 'aim' concept determines how much depth each 'forward' command adds
+
+aoc2_cs$cumulative_aim <- cumsum(aoc2_cs$net_depth)
+
+aoc2_cs$aim_based_net_depth <- with(aoc2_cs, cumulative_aim * net_forward)
+
+sum(aoc2_cs$aim_based_net_depth) * sum(aoc2_cs$net_forward)
