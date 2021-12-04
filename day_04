@@ -1,0 +1,121 @@
+###### puzzle 4
+
+# note: lazily did some cleaning on 4a in google sheet (whitespace trimming, row-and-column-indexing, etc.)
+# https://docs.google.com/spreadsheets/d/1RA2YKC9VhdDfdKVr6qQjwT1GMTiqJLVsDOusDYzWB3I/edit#gid=1028118403
+
+aoc4a <- read.csv("...") # boards
+aoc4b <- read.csv("...") # draw
+
+aoc4b$draw_index <- seq(1, nrow(aoc4b), 1)
+
+# get data into a long shape @ board_index * row_or_column_index * value
+# probably break apart rows and columns and then join them back together
+
+# columns
+
+aoc4a_cols <- aoc4a %>% select(-row_index)
+
+aoc4a_cols <- reshape2::melt(aoc4a_cols, id.vars = c("board_index"))
+
+# rows 
+
+aoc4a_rows <- reshape2::melt(aoc4a, id.vars = c("board_index", "row_index")) %>%
+  arrange(board_index, row_index) %>%
+  select(-variable)
+
+# rbind these
+
+colnames(aoc4a_cols) <- c("board_index", "roc_id", "value")
+colnames(aoc4a_rows) <- c("board_index", "roc_id", "value")
+
+a4_rb <- rbind(aoc4a_cols, aoc4a_rows) %>%
+  arrange(board_index, roc_id)
+
+### for each length of draw, check if each roc entry is IN the draw, if yes 1
+### group this by board_index, roc_id, and sum this check
+### if the max of this table == 5, break
+
+draw_length <- seq(1, nrow(aoc4b), 1)
+
+for(d in draw_length){ 
+  draw <- aoc4b %>%
+    filter(draw_index <= d)
+  draw_check <- a4_rb %>%
+    mutate(in_draw = ifelse(value %in% draw$draw, 1, 0))
+  draw_check_agg <- draw_check %>%
+    group_by(board_index, roc_id) %>%
+    summarise(tot_in_draw = sum(in_draw)) %>%
+    filter(tot_in_draw == 5)
+  if(max(draw_check_agg$tot_in_draw) == 5) {break}
+}
+
+a <- a4_rb %>%
+  filter(board_index == draw_check_agg$board_index) %>%
+  mutate(record_in_draw = ifelse(value %in% draw$draw, 0, 1),
+         sum_contribution = record_in_draw * as.numeric(value)) %>%
+  summarise(unmarked_sum = sum(sum_contribution) / 2) # dividing by two so as to not double-count
+
+b <- draw %>%
+  arrange(desc(draw_index)) %>%
+  mutate(reverse_draw_index = row_number(),
+         draw = as.numeric(draw)) %>%
+  filter(reverse_draw_index == 1)
+
+solution <- a$unmarked_sum * b$draw
+solution
+
+### find the 'worst' board
+
+draw_length <- seq(1, nrow(aoc4b), 1)
+
+# figure out the last-surviving board
+
+for(d in draw_length){ 
+  draw <- aoc4b %>%
+    filter(draw_index <= d)
+  draw_check <- a4_rb %>%
+    mutate(in_draw = ifelse(value %in% draw$draw, 1, 0))
+  draw_check_agg <- draw_check %>%
+    group_by(board_index, roc_id) %>%
+    summarise(tot_in_draw = sum(in_draw)) %>%
+    ungroup() %>%
+    group_by(board_index) %>%
+    summarise(best_board_entry = max(tot_in_draw)) %>%
+    ungroup() %>%
+    filter(best_board_entry < 5)
+  if(nrow(draw_check_agg) == 1) {break}
+}
+
+last_board <- draw_check_agg$board_index
+
+# figure out when the last-surviving board dies
+
+for(d in draw_length){ 
+  draw <- aoc4b %>%
+    filter(draw_index <= d)
+  draw_check <- a4_rb %>%
+    filter(board_index == last_board) %>%
+    mutate(in_draw = ifelse(value %in% draw$draw, 1, 0))
+  draw_check_agg <- draw_check %>%
+    group_by(board_index, roc_id) %>%
+    summarise(tot_in_draw = sum(in_draw)) %>%
+    filter(tot_in_draw == 5)
+  if(max(draw_check_agg$tot_in_draw) == 5) {break}
+}
+
+# solve
+
+a2 <- a4_rb %>%
+  filter(board_index == last_board) %>%
+  mutate(record_in_draw = ifelse(value %in% draw$draw, 0, 1),
+         sum_contribution = record_in_draw * as.numeric(value)) %>%
+  summarise(unmarked_sum = sum(sum_contribution) / 2) # dividing by two so as to not double-count
+
+b2 <- draw %>%
+  arrange(desc(draw_index)) %>%
+  mutate(reverse_draw_index = row_number(),
+         draw = as.numeric(draw)) %>%
+  filter(reverse_draw_index == 1)
+
+solution_2 <- a2$unmarked_sum * b2$draw
+solution_2
