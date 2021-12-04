@@ -1,0 +1,86 @@
+aoc3 <- read.csv("...", colClasses = "character")
+
+string_pos_max <- nchar(aoc3$error_string[1])
+string_positions <- seq(1, string_pos_max, 1)
+
+for(s in string_positions){assign(paste0("v_", s), as.numeric(substr(aoc3$error_string, s, s)))}
+
+v_comb <- as.data.frame(cbind(v_1, v_2, v_3, v_4, v_5, v_6, v_7, v_8, v_9, v_10, v_11, v_12))
+
+vc <- v_comb %>%
+  summarise(v1 = ifelse(sum(v_1) > 500, 1, 0),
+            v2 = ifelse(sum(v_2) > 500, 1, 0),
+            v3 = ifelse(sum(v_3) > 500, 1, 0),
+            v4 = ifelse(sum(v_4) > 500, 1, 0),
+            v5 = ifelse(sum(v_5) > 500, 1, 0),
+            v6 = ifelse(sum(v_6) > 500, 1, 0),
+            v7 = ifelse(sum(v_7) > 500, 1, 0),
+            v8 = ifelse(sum(v_8) > 500, 1, 0),
+            v9 = ifelse(sum(v_9) > 500, 1, 0),
+            v10 = ifelse(sum(v_10) > 500, 1, 0),
+            v11 = ifelse(sum(v_11) > 500, 1, 0),
+            v12 = ifelse(sum(v_12) > 500, 1, 0),
+            )
+
+gamma <- with(vc, paste0(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12))
+
+epsilon <- with(vc, paste0(abs(1-v1), abs(1-v2), abs(1-v3), abs(1-v4), abs(1-v5), abs(1-v6),
+                           abs(1-v7), abs(1-v8), abs(1-v9), abs(1-v10), abs(1-v11), abs(1-v12)))
+
+strtoi(gamma, 2) * strtoi(epsilon, 2)
+
+# part 2 -- start with the v_comb set
+
+# function for OGR
+
+v_comb <- as.data.frame(cbind(v_1, v_2, v_3, v_4, v_5, v_6, v_7, v_8, v_9, v_10, v_11, v_12))
+
+for(s in string_positions){ if(nrow(v_comb) == 1) {break}
+  vv <- v_comb
+  summary_table <- vv %>%
+    group_by_at(paste0("v_", s)) %>%
+    summarise(count = n())
+  summary_table$tiebreaker <- ifelse(summary_table[[1]] == 1, 1, 2)
+  summary_table <- summary_table %>%
+    arrange(desc(count), tiebreaker)
+  summary_table <- summary_table %>%
+    mutate(rn = seq(1, nrow(summary_table), 1)) %>%
+    filter(rn == 1) %>%
+    select_at(paste0("v_", s))
+  filter_value <- max(summary_table[1])
+  kept_set <- vv %>%
+    filter(vv[[s]] == filter_value)
+  v_comb <- kept_set
+}
+
+ogr <- with(kept_set, paste0(v_1, v_2, v_3, v_4, v_5, v_6, v_7, v_8, v_9, v_10, v_11, v_12))
+strtoi(ogr, 2)
+
+# function for CO2R
+
+v_comb <- as.data.frame(cbind(v_1, v_2, v_3, v_4, v_5, v_6, v_7, v_8, v_9, v_10, v_11, v_12))
+
+for(s in string_positions){ if(nrow(v_comb) == 1) {break}
+  vv <- v_comb
+  summary_table <- vv %>%
+    group_by_at(paste0("v_", s)) %>%
+    summarise(count = n())
+  summary_table$tiebreaker <- ifelse(summary_table[[1]] == 0, 1, 2)
+  summary_table <- summary_table %>%
+    arrange(count, tiebreaker)
+  summary_table <- summary_table %>%
+    mutate(rn = seq(1, nrow(summary_table), 1)) %>%
+    filter(rn == 1) %>%
+    select_at(paste0("v_", s))
+  filter_value <- max(summary_table[1])
+  kept_set <- vv %>%
+    filter(vv[[s]] == filter_value)
+  v_comb <- kept_set
+}
+
+co2r <- with(kept_set, paste0(v_1, v_2, v_3, v_4, v_5, v_6, v_7, v_8, v_9, v_10, v_11, v_12))
+strtoi(co2r, 2)
+
+# product
+
+strtoi(co2r, 2) * strtoi(ogr, 2)
