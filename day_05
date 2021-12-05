@@ -1,0 +1,120 @@
+###### problem 5
+
+aoc5 <- read.csv("/Users/seankuhn/Downloads/AOC\ -\ 5.csv")
+
+aoc5_sub <- aoc5 %>%
+  filter(x1 == x2 | y1 == y2)
+
+# looks like a grid of 1,1000 will do
+
+aoc5_sub %>%
+  summarise(min_x1 = min(x1),
+            min_x2 = min(x2),
+            max_x1 = max(x1),
+            max_x2 = max(x2),
+            min_y1 = min(y1),
+            min_y2 = min(y2),
+            max_y1 = max(y1),
+            max_y2 = max(y2))
+
+grid <- as.data.frame(seq(1,1000,1))
+colnames(grid) <- c("grid_value")
+
+# no cases where it's a single point:
+
+aoc5_sub %>%
+  filter(x1 == x2 & y1 == y2) %>%
+  nrow()
+
+aoc5_sub$segment_type <- with(aoc5_sub, ifelse(x1 == x2, "vertical", "horizontal"))
+
+# need this because order matters for BETWEEN operator
+
+aoc5_sub <- aoc5_sub %>%
+  mutate(y_low = pmin(y1, y2),
+         y_high = pmax(y1, y2),
+         x_low = pmin(x1, x2),
+         x_high = pmax(x1, x2))
+
+a5_grid_expand <- sqldf("
+            SELECT
+              aoc5_sub.*,
+                grid.grid_value
+            FROM aoc5_sub
+                LEFT JOIN grid ON (CASE 
+                                WHEN segment_type = 'vertical' THEN grid.grid_value BETWEEN y_low AND y_high
+                                WHEN segment_type = 'horizontal' THEN grid.grid_value BETWEEN x_low AND x_high
+                              END)
+                        ")
+
+a5_grid_expand$true_x <- with(a5_grid_expand, ifelse(segment_type == "vertical", x1, grid_value))
+a5_grid_expand$true_y <- with(a5_grid_expand, ifelse(segment_type == "horizontal", y1, grid_value))
+
+# now, count the number of points @ each {grid, fixed}
+
+a5_grid_expand %>%
+  group_by(true_x, true_y) %>%
+  summarise(count_at_point = n()) %>%
+  ungroup() %>%
+  filter(count_at_point > 1) %>%
+  nrow()
+
+### same question, but add 45-degree diagonals in
+
+# i can take the d5_grid_expand and rbind it together with the diagonal solution
+# so let's find the diagonal segments
+
+aoc5_diags <- aoc5 %>%
+  mutate(slope = (y2-y1) / (x2-x1)) %>%
+  filter(slope %in% c(-1,1))
+
+# looks like all 500 are either h/v or 45s -- 500 @ 330 + 170
+
+aoc5_diags <- aoc5_diags %>%
+  mutate(y_low = pmin(y1, y2),
+         y_high = pmax(y1, y2),
+         x_low = pmin(x1, x2),
+         x_high = pmax(x1, x2))
+
+# one way forward would be to make a 1000*1000 grid
+# and then make the join condtion BOTH: (a) where the point is BETWEEN; & (b) where the slope relative to both is +/- 1
+# a special case of (b) is the endpoints of the segment which also need included
+
+grid_2d <- sqldf("
+                    SELECT
+                      g1.grid_value AS x,
+                        g2.grid_value AS y
+                    FROM grid g1
+                        JOIN grid g2 ON 1=1
+                    ORDER BY 1,2
+                 ")
+
+g2d_expand <- sqldf("
+                      SELECT
+                        a.*,
+                          g.x AS grid_x,
+                          g.y AS grid_y
+                      FROM aoc5_diags a
+                        JOIN grid_2d g ON g.x BETWEEN a.x_low AND a.x_high
+                                            AND g.y BETWEEN a.y_low AND a.y_high 
+                                            AND (ABS((g.y-a.y2) / (g.x-a.x2)) = 1 OR (g.y = a.y2 AND g.x = a.x2))
+                                            AND (ABS((g.y-a.y1) / (g.x-a.x1)) = 1 OR (g.y = a.y1 AND g.x = a.x1))
+                    ")
+
+h_v_lines <- a5_grid_expand %>%
+  select(x1, y1, x2, y2, true_x, true_y)
+
+diag_lines <- g2d_expand %>%
+  select(x1, y1, x2, y2, grid_x, grid_y)
+
+colnames(diag_lines) <- c("x1", "y1", "x2", "y2", "true_x", "true_y")
+
+bind_diags_and_hv <- rbind(h_v_lines, diag_lines)
+
+bind_diags_and_hv %>%
+  group_by(true_x, true_y) %>%
+  summarise(vents_at_point = n()) %>%
+  ungroup() %>%
+  filter(vents_at_point > 1) %>%
+  nrow()
+
