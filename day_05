@@ -1,11 +1,16 @@
 ###### problem 5
 
-aoc5 <- read.csv("/Users/seankuhn/Downloads/AOC\ -\ 5.csv")
+# note: i handled splitting the coordinate inputs of the form X1,Y1 -> X2,Y2 in this gsheet:
+# https://docs.google.com/spreadsheets/d/1RA2YKC9VhdDfdKVr6qQjwT1GMTiqJLVsDOusDYzWB3I/edit#gid=1030724587
+
+aoc5 <- read.csv("...")
+
+# subset to H/V lines:
 
 aoc5_sub <- aoc5 %>%
   filter(x1 == x2 | y1 == y2)
 
-# looks like a grid of 1,1000 will do
+# looks like a grid of 1,1000 will do:
 
 aoc5_sub %>%
   summarise(min_x1 = min(x1),
@@ -100,6 +105,8 @@ g2d_expand <- sqldf("
                                             AND (ABS((g.y-a.y2) / (g.x-a.x2)) = 1 OR (g.y = a.y2 AND g.x = a.x2))
                                             AND (ABS((g.y-a.y1) / (g.x-a.x1)) = 1 OR (g.y = a.y1 AND g.x = a.x1))
                     ")
+
+# make the shapes and colnames match for rbinding:
 
 h_v_lines <- a5_grid_expand %>%
   select(x1, y1, x2, y2, true_x, true_y)
