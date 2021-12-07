@@ -1,0 +1,89 @@
+###### problem 6
+
+# transposed the fish timers into a single column called 't0' in an upstream gsheet
+
+aoc6 <- read.csv("...")
+
+days <- seq(1,80,1)
+
+for(d in days){
+  
+  current_day <- d
+  prev_day <- (d-1)
+  day_diff <- 1
+  
+  # process a day
+  
+  aoc6$t0 <- aoc6$t0 - day_diff
+  
+  # figure out how many fish needed added
+  
+  fish_to_add <- aoc6 %>%
+    filter(t0 == -1) %>%
+    nrow()
+  
+  v_added_fish <- rep(8, fish_to_add)
+  t_added_fish <- as.data.frame(v_added_fish)
+  colnames(t_added_fish) <- c("t0")
+  
+  # update -1's to 6's
+  
+  aoc6 <- aoc6 %>%
+    mutate(t0 = ifelse(t0 == -1, 6, t0))
+  
+  # bind together
+  
+  aoc6 <- rbind(aoc6, t_added_fish)
+  
+}
+
+solution <- nrow(aoc6)
+solution
+
+### part 2
+
+aoc6g <- aoc6 %>%
+  group_by(t0) %>%
+  summarise(n_obs = n())
+
+days <- seq(1,256,1)
+
+for(d in days){
+  
+  current_day <- d
+  prev_day <- (d-1)
+  day_diff <- 1
+  
+  # process a day
+  
+  aoc6g$t0 <- aoc6g$t0 - day_diff
+  
+  # figure out how many fish needed added
+  
+  fish_to_add <- aoc6g %>%
+    filter(t0 == -1) %>%
+    summarise(fta = sum(n_obs))
+  
+  v_added_fish_timer <- 8
+  v_added_fish <- fish_to_add$fta
+  t_added_fish <- as.data.frame(cbind(v_added_fish_timer, v_added_fish))
+  colnames(t_added_fish) <- c("t0", "n_obs")
+  
+  # update 0's to 6's
+  
+  aoc6g <- aoc6g %>%
+    mutate(t0 = ifelse(t0 == -1, 6, t0))
+  
+  # bind together and re-aggregate
+  
+  aoc6g <- rbind(aoc6g, t_added_fish)
+  
+  aoc6g <- aoc6g %>%
+    group_by(t0) %>%
+    summarise(n_obs = sum(n_obs)) %>%
+    ungroup()
+  
+}
+
+solution_2 <- sum(aoc6g$n_obs)
+solution_2
