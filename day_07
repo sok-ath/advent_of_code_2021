@@ -1,0 +1,61 @@
+###### problem 7
+
+# split to a single column of crab positions in a google sheet
+
+aoc7 <- read.csv("/Users/seankuhn/Downloads/AOC\ -\ 7.csv")
+
+# looks like [0,2000] is the relevant interval:
+
+ggplot(aoc7, aes(x = crab_poz)) +
+  geom_density() +
+  ggtitle("distribution of crab starting points")
+
+# first loop
+
+grid <- seq(0,2000,1)
+catch_df <- data.frame()
+
+for(g in grid){
+  
+  aoc7$deviation <- abs(aoc7$crab_poz - g)
+  fuel_consumed <- sum(aoc7$deviation)
+  temp_df <- as.data.frame((cbind(g, fuel_consumed)))
+  catch_df <- rbind(catch_df, temp_df)
+  
+}
+
+ggplot(catch_df, aes(x = g, y = fuel_consumed)) +
+  geom_point() +
+  ggtitle("fuel consumed ~ rallying point")
+
+catch_df %>%
+  arrange(fuel_consumed) %>%
+  mutate(rn = row_number()) %>%
+  filter(rn == 1)
+
+### second problem: update cost function to: first step costs one, second step costs two, third step costs three, etc.
+
+# math says that this 'factorial, except addition' is equal to (n^2 + n) / 2
+# so, can just apply this function to the deviation in the loop above
+
+grid <- seq(0,2000,1)
+catch_df <- data.frame()
+
+for(g in grid){
+  
+  aoc7$deviation <- abs(aoc7$crab_poz - g)
+  aoc7$deviation_transformed <- with(aoc7, (deviation + deviation^2) / 2)
+  fuel_consumed <- sum(aoc7$deviation_transformed)
+  temp_df <- as.data.frame((cbind(g, fuel_consumed)))
+  catch_df <- rbind(catch_df, temp_df)
+  
+}
+
+ggplot(catch_df, aes(x = g, y = fuel_consumed)) +
+  geom_point() +
+  ggtitle("fuel consumed ~ rallying point")
+
+catch_df %>%
+  arrange(fuel_consumed) %>%
+  mutate(rn = row_number()) %>%
+  filter(rn == 1)
